@@ -6,6 +6,8 @@ import HeroSection from './components/HeroSection';
 import InfoSection from './components/InfoSection';
 import Footer from './components/Footer';
 import LoginPage from './components/LoginPage';
+import RegisterPage from './components/RegisterPage';
+import ProfilePage from './components/ProfilePage';
 
 function App() {
   return (
@@ -17,6 +19,8 @@ function App() {
           <Route path="/" element={<HeroSection />} />
           <Route path="/howToBet" element={<InfoSection />} />
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
           {/* Lägg till andra routes här */}
         </Routes>
 
