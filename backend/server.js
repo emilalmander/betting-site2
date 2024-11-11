@@ -1,18 +1,30 @@
-// server.js
-const express = require('express');
-const connectDB = require('./config/db');
 const dotenv = require('dotenv');
-const cors = require('cors');
-const authRoutes = require('./routes/authRoutes');
+dotenv.config();  // Läs in miljövariabler direkt
 
-dotenv.config();
-connectDB();
+const express = require('express');
+const cors = require('cors');
+const mongoose = require('mongoose');
+const authRoutes = require('./routes/authRoutes');  // Kontrollera att sökvägen stämmer
 
 const app = express();
-app.use(cors()); // Aktivera CORS
-app.use(express.json());
 
-app.use('/api/auth', authRoutes);
+app.use(cors({
+  origin: 'http://localhost:3000',
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
+
+app.use(express.json());
+app.use('/api/auth', authRoutes);  // Använd authRoutes för /api/auth
+
+mongoose.connect(process.env.MONGO_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+}).then(() => {
+  console.log("Connected to MongoDB");
+}).catch((error) => {
+  console.error("MongoDB connection error:", error);
+});
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
