@@ -76,3 +76,18 @@ exports.login = async (req, res) => {
     }
   };
   
+  exports.profile = async (req, res) => {
+    try {
+      const token = req.headers.authorization.split(' ')[1];  // Hämta token från headern
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);  // Verifiera token med JWT_SECRET
+  
+      const user = await User.findById(decoded.id).select('-password');  // Hämta användaren utan lösenordet
+      if (!user) {
+        return res.status(404).json({ message: 'Användare hittades inte' });
+      }
+      res.json({ user });
+    } catch (error) {
+      console.error('Kunde inte hämta profilinfo', error);
+      res.status(500).json({ message: 'Serverfel', error });
+    }
+  };
