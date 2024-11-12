@@ -7,6 +7,8 @@ const Navbar = () => {
   const { isLoggedIn, logout } = useAuth();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
+  console.log("isLoggedIn status i Navbar:", isLoggedIn); // Kontrollera om statusen ändras
+
   const handleLoginLogout = () => {
     if (isLoggedIn) {
       setShowLogoutConfirm(true);
@@ -36,7 +38,11 @@ const Navbar = () => {
             <Link to="/" className="hover:text-green-400">Home</Link>
             <Link to="/howToBet" className="hover:text-green-400">How to Bet</Link>
             <Link to="/matches" className="hover:text-green-400">Matcher</Link>
+            <Link to="/leaderboard" className="hover:text-green-400">Leaderboard</Link>
             <Link to="/teams" className="hover:text-green-400">Teams</Link>
+            <Link to="/my-groups" className="hover:text-green-400">Mina Grupper</Link>
+
+            <Link to="/create-group" className="hover:text-green-400">Skapa Grupp</Link>
             <Link to="/profile" className="text-green-500 hover:text-green-400">Profile</Link>
           </div>
 

@@ -1,17 +1,31 @@
-// src/components/MatchesPage.jsx
-import React from 'react';
-import { mockMatches } from '../mockMatches';
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
 import MatchCard from './MatchCard';
 
 const MatchesPage = () => {
+  const [matches, setMatches] = useState([]);
+
+  useEffect(() => {
+    const fetchMatches = async () => {
+      try {
+        const response = await axios.get('http://localhost:5000/api/matches');
+        setMatches(response.data);
+      } catch (error) {
+        console.error('Error fetching matches:', error);
+      }
+    };
+
+    fetchMatches();
+  }, []);
+
   return (
-    <div className="flex flex-col items-center min-h-screen bg-gray-950 text-gray-200">
-      <h1 className="text-3xl font-bold text-green-500 mb-6">Alla Matcher</h1>
-      <div className="space-y-4">
-        {mockMatches.map((match) => (
-          <MatchCard key={match.matchId} match={match} />
-        ))}
-      </div>
+    <div>
+      <h1>Alla Matcher</h1>
+      {matches.length > 0 ? (
+        matches.map((match) => <MatchCard key={match._id} match={match} />)
+      ) : (
+        <p>Inga matcher tillgängliga.</p>
+      )}
     </div>
   );
 };

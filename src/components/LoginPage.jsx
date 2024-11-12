@@ -12,23 +12,20 @@ const LoginPage = () => {
 
   const handleLogin = async (e) => {
     e.preventDefault();
-
     try {
       const res = await axios.post('http://localhost:5000/api/auth/login', {
         email,
         password,
       });
-
-      // Om inloggningen lyckas, spara användardata och token
-      const userData = res.data.user; // Anta att användardata finns här
-      login(userData);
-      localStorage.setItem('token', res.data.token);
-      setMessage('Login successful!');
-      navigate('/profile'); // Skicka användaren till profilsidan efter inloggning
-
+  
+      // Antag att res.data.user innehåller användarens data, inklusive _id
+      if (res.data && res.data.user) {
+        console.log("Användardata efter inloggning:", res.data.user); // Bekräfta att användarens ID finns här
+        login(res.data.user);
+      }
     } catch (error) {
-      setMessage('Login failed. Invalid credentials.');
-      console.error(error);
+      console.error('Inloggning misslyckades:', error);
+      alert('Inloggning misslyckades. Kontrollera dina inloggningsuppgifter.');
     }
   };
 

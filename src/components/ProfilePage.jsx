@@ -1,55 +1,59 @@
-// src/components/ProfilePage.jsx
-import React from 'react';
+// ProfilePage.jsx
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '../AuthContext';
-import { mockUserGuesses } from '../mockUserGuesses';
+import axios from 'axios';
 
 const ProfilePage = () => {
   const { user } = useAuth();
+  const [guesses, setGuesses] = useState([]);
 
-  if (!user) {
-    return <p>Ingen användare är inloggad.</p>;
-  }
+  useEffect(() => {
+    const fetchGuesses = async () => {
+      try {
+        const response = await axios.get(`http://localhost:5000/api/guesses/user/${user.id}`);
+        setGuesses(response.data);
+      } catch (error) {
+        console.error('Kunde inte hämta gissningshistorik:', error.response ? error.response.data : error.message);
+      }
+    };
+  
+    if (user) {
+      fetchGuesses();
+    }
+  }, [user]);
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-950 text-gray-200">
-      <div className="bg-gray-900 p-8 rounded-lg shadow-lg w-full max-w-md">
-        <h2 className="text-3xl font-bold text-center text-green-500 mb-6">Your Profile</h2>
-        
-        <div className="space-y-4">
-          {/* Användarinformation */}
-          <div>
-            <h3 className="text-xl font-semibold">Name:</h3>
-            <p className="text-gray-300">{user.name}</p>
+    <div className="flex flex-col items-center min-h-screen bg-gray-950 text-gray-200 p-4">
+      <div className="bg-gray-900 p-6 rounded-lg shadow-lg w-full max-w-lg">
+        <h2 className="text-3xl font-bold text-center text-green-500 mb-4">Profil</h2>
+        {user && (
+          <div className="mb-6">
+            <p><strong>Namn:</strong> {user.name}</p>
+            <p><strong>Email:</strong> {user.email}</p>
           </div>
-          <div>
-            <h3 className="text-xl font-semibold">Email:</h3>
-            <p className="text-gray-300">{user.email}</p>
-          </div>
+        )}
 
-          {/* Bettinghistorik */}
-          <div>
-            <h3 className="text-xl font-semibold">Betting History:</h3>
-            {mockUserGuesses.length > 0 ? (
-              <div className="space-y-4 mt-4">
-                {mockUserGuesses.map((guess) => (
-                  <div key={guess.matchId} className="bg-gray-800 p-4 rounded-md">
-                    <h4 className="text-lg font-medium mb-2">{guess.teamA} vs {guess.teamB}</h4>
-                    <p><strong>Date:</strong> {guess.date} - {guess.time}</p>
-                    <p><strong>Exact Score:</strong> {guess.userGuess.exactScore.teamA} - {guess.userGuess.exactScore.teamB}</p>
-                    <p><strong>Winning Team:</strong> {guess.userGuess.winningTeam === "teamA" ? guess.teamA : guess.teamB}</p>
-                    <p><strong>Total Points:</strong> {guess.userGuess.totalGoals}</p>
-                    <p><strong>Points Earned:</strong> {guess.userGuess.pointsEarned}</p>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-gray-400 italic">No bets placed yet.</p>
-            )}
-          </div>
-        </div>
+        <h3 className="text-2xl font-bold mb-4">Gissningshistorik</h3>
+        {guesses.length > 0 ? (
+          <ul className="space-y-4">
+            {guesses.map((guess) => (
+              <li key={guess._id} className="bg-gray-800 p-4 rounded-md">
+                <p><strong>Match:</strong> {guess.match.teamA} vs {guess.match.teamB}</p>
+                <p><strong>Gissat Resultat:</strong> {guess.exactScore.teamA} - {guess.exactScore.teamB}</p>
+                <p><strong>Vinnande Lag:</strong> {guess.winningTeam}</p>
+                <p><strong>Segermarginal:</strong> {guess.winMargin}</p>
+                <p><strong>Totalpoäng:</strong> {guess.totalGoals}</p>
+                <p><strong>Poäng:</strong> {guess.pointsEarned || 0}</p> 
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-gray-400 italic">Inga gissningar gjorda ännu.</p>
+        )}
       </div>
     </div>
   );
 };
+
 
 export default ProfilePage;

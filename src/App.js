@@ -11,9 +11,15 @@ import ProfilePage from './components/ProfilePage';
 import { AuthProvider } from './AuthContext';
 import MatchesPage from './components/MatchesPage';
 import MatchDetails from './components/MatchDetails';
+import Leaderboard from './components/Leaderboard';
+import CreateGroup from './components/CreateGroup';
+import MyGroupsPage from './components/MyGroupsPage';
+import GroupDetailsPage from './components/GroupDetailsPage';
+
 
 
 function App() {
+  console.log("App laddas"); // Testutmatning
   return (
     <AuthProvider>
     <Router>
@@ -28,6 +34,13 @@ function App() {
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/matches" element={<MatchesPage />} />
           <Route path="/matches/:id" element={<MatchDetails />} />
+          <Route path="/leaderboard" element={<Leaderboard />} />
+          <Route path="/create-group" element={<CreateGroup />} />
+          <Route path="/my-groups" element={<MyGroupsPage />} />
+          <Route path="/groups/:groupId" element={<GroupDetailsPage />} />
+          
+
+          
           {/* Lägg till andra routes här */}
         </Routes>
 

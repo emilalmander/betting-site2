@@ -1,0 +1,21 @@
+1. Poängsystem
+Beskrivning: Implementera poängsystemet där varje gissning ger olika poäng beroende på exaktheten och svårigheten. Exakt resultat kan ge högst poäng, rätt vinnande lag mindre poäng, och specifika marginalgissningar kan ge en viss poängskala.
+Steg: Vi designar reglerna och poängstrukturen och implementerar logiken både i frontend och backend.
+2. Leaderboard
+Beskrivning: Skapa en leaderboard där spelare kan se sin rank jämfört med andra i realtid.
+Steg: Designa en enkel leaderboard-komponent, koppla den till backend för att få poäng och rankning från databasen.
+3. Skapa grupper och invitera spelare
+Beskrivning: Tillåt användare att skapa privata grupper för att tävla med vänner och familj.
+Steg: Skapa en grupphanteringsfunktion där användare kan skapa en ny grupp, bjuda in andra användare, och se gruppspecifika ledare.
+4. Resultat och statistik för varje match
+Beskrivning: Visa historiska data och statistik för varje match.
+Steg: Hämta statistik från ett API och visa relevant data som målsnitt, tidigare matcher, och lagens prestation.
+5. API-integration för att hämta matcher och resultat
+Beskrivning: Byt ut mockdata mot verklig API-data för matcher och resultat.
+Steg: Använd samma struktur som nu, och anpassa API-anropen för att fylla matchlistan och andra data som rör matcher.
+6. Resultatsida för att visa tidigare gissningar och poäng
+Beskrivning: Användaren ska kunna se en historik av sina gissningar, med resultat och poäng för varje match.
+Steg: Designa en historiksida och koppla den till backend för att hämta tidigare gissningar och deras poäng.
+7. Optimering av användarupplevelsen
+Beskrivning: Förbättra användarupplevelsen, som till exempel laddningsindikatorer när data hämtas eller ett sätt att filtrera matcher.
+Steg: Lägg till feedbackelement, filtreringsalternativ, och UI-justeringar för att förbättra flödet.
