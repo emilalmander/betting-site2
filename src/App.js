@@ -15,6 +15,7 @@ import Leaderboard from './components/Leaderboard';
 import CreateGroup from './components/CreateGroup';
 import MyGroupsPage from './components/MyGroupsPage';
 import GroupDetailsPage from './components/GroupDetailsPage';
+import HomePage from './components/HomePage';
 
 
 
@@ -27,7 +28,7 @@ function App() {
         <Navbar />
         
         <Routes>
-          <Route path="/" element={<HeroSection />} />
+          <Route path="/" element={<HomePage />} />
           <Route path="/howToBet" element={<InfoSection />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />

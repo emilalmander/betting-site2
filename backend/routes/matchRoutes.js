@@ -4,6 +4,20 @@ const Match = require('../models/Match');
 
 console.log('matchRoutes loaded'); // Kontrollera att filen laddas
 
+
+router.get('/upcoming', async (req, res) => {
+  try {
+    const today = new Date();
+    console.log("Dagens datum:", today);
+    const upcomingMatches = await Match.find({ date: { $gte: today } }).sort({ date: 1 });
+    console.log("Hämtade kommande matcher:", upcomingMatches); // Logga matcherna
+    res.json(upcomingMatches);
+  } catch (error) {
+    console.error('Kunde inte hämta kommande matcher:', error);
+    res.status(500).json({ error: 'Kunde inte hämta kommande matcher' });
+  }
+});
+
 // POST /api/matches/add-test-matches - Lägg till testmatcher
 router.post('/add-test-matches', async (req, res) => {
   try {
@@ -66,5 +80,44 @@ router.post('/', async (req, res) => {
     res.status(500).json({ error: 'Kunde inte skapa match' });
   }
 });
+router.get('/upcoming', async (req, res) => {
+  try {
+    const currentDate = new Date();
+    const upcomingMatches = await Match.find({ date: { $gte: currentDate } }).sort({ date: 1 });
+    res.json(upcomingMatches);
+  } catch (error) {
+    console.error('Kunde inte hämta kommande matcher:', error);
+    res.status(500).json({ error: 'Kunde inte hämta kommande matcher' });
+  }
+});
+router.post('/add-future-test-matches', async (req, res) => {
+  try {
+    const futureTestMatches = [
+      {
+        teamA: 'Future Team Alpha',
+        teamB: 'Future Team Beta',
+        date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 dagar framåt
+        time: '18:00',
+        odds: { teamA: 1.8, teamB: 2.5, draw: 3.1 },
+      },
+      {
+        teamA: 'Future Team Gamma',
+        teamB: 'Future Team Delta',
+        date: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 14 dagar framåt
+        time: '20:00',
+        odds: { teamA: 2.2, teamB: 2.8, draw: 3.4 },
+      },
+    ];
+
+    const matches = await Match.insertMany(futureTestMatches);
+    res.status(201).json(matches);
+  } catch (error) {
+    console.error('Kunde inte lägga till framtida matcher:', error);
+    res.status(500).json({ error: 'Kunde inte lägga till framtida matcher' });
+  }
+});
+
+
+
 
 module.exports = router;

@@ -99,5 +99,14 @@ router.put('/update-points/:guessId', async (req, res) => {
       res.status(500).json({ error: 'Kunde inte uppdatera poäng' });
     }
   });
+  router.get('/user/:userId', async (req, res) => {
+    try {
+      const guesses = await Guess.find({ user: req.params.userId }).populate('match');
+      res.json(guesses);
+    } catch (error) {
+      console.error('Kunde inte hämta gissningshistorik:', error);
+      res.status(500).json({ error: 'Kunde inte hämta gissningshistorik' });
+    }
+  });
 
 module.exports = router;
