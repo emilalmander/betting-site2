@@ -1,123 +1,94 @@
 const express = require('express');
 const router = express.Router();
 const Match = require('../models/Match');
+const { scrapeBasicMatchData, scrapeMatchDetails } = require('../scraper/scraper');
 
-console.log('matchRoutes loaded'); // Kontrollera att filen laddas
 
 
-router.get('/upcoming', async (req, res) => {
+let cachedMatches = null; // Cache för matcherna
+let lastCacheTime = null; // Tid när cachen senast uppdaterades
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minuter
+
+
+router.get('/scrape', async (req, res) => {
   try {
-    const today = new Date();
-    console.log("Dagens datum:", today);
-    const upcomingMatches = await Match.find({ date: { $gte: today } }).sort({ date: 1 });
-    console.log("Hämtade kommande matcher:", upcomingMatches); // Logga matcherna
-    res.json(upcomingMatches);
-  } catch (error) {
-    console.error('Kunde inte hämta kommande matcher:', error);
-    res.status(500).json({ error: 'Kunde inte hämta kommande matcher' });
-  }
-});
-
-// POST /api/matches/add-test-matches - Lägg till testmatcher
-router.post('/add-test-matches', async (req, res) => {
-  try {
-    const testMatches = [
-      {
-        teamA: 'Team Alpha',
-        teamB: 'Team Beta',
-        date: new Date('2024-11-20'),
-        time: '18:00',
-        odds: { teamA: 1.5, teamB: 2.8, draw: 3.0 },
-      },
-      {
-        teamA: 'Team Gamma',
-        teamB: 'Team Delta',
-        date: new Date('2024-11-21'),
-        time: '20:00',
-        odds: { teamA: 2.0, teamB: 2.5, draw: 3.2 },
-      },
-    ];
-
-    const matches = await Match.insertMany(testMatches);
-    res.status(201).json(matches);
-  } catch (error) {
-    res.status(500).json({ error: 'Kunde inte lägga till matcher' });
-  }
-});
-
-// GET /api/matches - Hämta alla matcher
-router.get('/', async (req, res) => {
-  try {
-    const matches = await Match.find();
+    const matches = await scrapeBasicMatchData();
     res.json(matches);
   } catch (error) {
+    console.error('Error scraping matches:', error);
+    res.status(500).json({ error: 'Kunde inte scrapea matcher' });
+  }
+});
+
+
+
+
+// Route för att hämta alla matcher
+router.get('/', async (req, res) => {
+  try {
+    const currentTime = Date.now();
+    
+    // Kontrollera om cachen är giltig
+    if (cachedMatches && (currentTime - lastCacheTime) < CACHE_DURATION) {
+      console.log('Använder cachade matcher');
+      return res.json(cachedMatches);
+    }
+
+    console.log('Hämtar nya matcher från scraper...');
+    const matches = await scrapeBasicMatchData();
+
+    // Uppdatera cache
+    cachedMatches = matches;
+    lastCacheTime = currentTime;
+
+    res.json(matches);
+  } catch (error) {
+    console.error('Error fetching matches:', error);
     res.status(500).json({ error: 'Kunde inte hämta matcher' });
   }
 });
 
-// GET /api/matches/:id - Hämta en specifik match
+// Hämta detaljer för en specifik match
 router.get('/:id', async (req, res) => {
-  console.log("ID mottaget:", req.params.id);  // Felsökningslogg
+  const { id } = req.params;
   try {
-    const match = await Match.findById(req.params.id);
-    if (!match) {
-      return res.status(404).json({ error: 'Matchen hittades inte' });
-    }
-    res.json(match);
+    const matchDetails = await scrapeMatchDetails(id); // Hämta detaljer från scraper
+    res.json(matchDetails);
   } catch (error) {
-    res.status(500).json({ error: 'Kunde inte hämta matchen' });
+    console.error(`Error fetching details for match ${id}:`, error);
+    res.status(500).json({ error: 'Kunde inte hämta matchdetaljer' });
   }
 });
-
-// POST /api/matches - Skapa en ny match
-router.post('/', async (req, res) => {
+router.get('/user/:userId', async (req, res) => {
+  const { userId } = req.params;
   try {
-    const { teamA, teamB, date, time, odds } = req.body;
-    const newMatch = new Match({ teamA, teamB, date, time, odds });
-    await newMatch.save();
-    res.status(201).json(newMatch);
+    const guesses = await Guess.find({ userId });
+    res.json({ totalGuesses: guesses.length });
   } catch (error) {
-    res.status(500).json({ error: 'Kunde inte skapa match' });
+    console.error('Error fetching user guesses:', error);
+    res.status(500).json({ error: 'Kunde inte hämta gissningar' });
   }
 });
-router.get('/upcoming', async (req, res) => {
+router.get('/leaderboard/user/:userId', async (req, res) => {
+  const { userId } = req.params;
   try {
-    const currentDate = new Date();
-    const upcomingMatches = await Match.find({ date: { $gte: currentDate } }).sort({ date: 1 });
-    res.json(upcomingMatches);
+    const guesses = await Guess.find({ userId });
+    const totalPoints = guesses.reduce((sum, guess) => sum + guess.points, 0);
+    res.json({ totalPoints });
   } catch (error) {
-    console.error('Kunde inte hämta kommande matcher:', error);
-    res.status(500).json({ error: 'Kunde inte hämta kommande matcher' });
+    console.error('Error fetching user points:', error);
+    res.status(500).json({ error: 'Kunde inte hämta poäng' });
   }
 });
-router.post('/add-future-test-matches', async (req, res) => {
+router.get('/history', async (req, res) => {
   try {
-    const futureTestMatches = [
-      {
-        teamA: 'Future Team Alpha',
-        teamB: 'Future Team Beta',
-        date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 dagar framåt
-        time: '18:00',
-        odds: { teamA: 1.8, teamB: 2.5, draw: 3.1 },
-      },
-      {
-        teamA: 'Future Team Gamma',
-        teamB: 'Future Team Delta',
-        date: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 14 dagar framåt
-        time: '20:00',
-        odds: { teamA: 2.2, teamB: 2.8, draw: 3.4 },
-      },
-    ];
-
-    const matches = await Match.insertMany(futureTestMatches);
-    res.status(201).json(matches);
+    const matches = await Match.find({ date: { $lt: new Date() } }); // Matcher innan dagens datum
+    res.json(matches);
   } catch (error) {
-    console.error('Kunde inte lägga till framtida matcher:', error);
-    res.status(500).json({ error: 'Kunde inte lägga till framtida matcher' });
+    console.error('Error fetching match history:', error);
+    res.status(500).json({ error: 'Kunde inte hämta matchhistorik' });
   }
 });
-
-
 
 
 module.exports = router;

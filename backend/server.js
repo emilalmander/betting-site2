@@ -14,11 +14,12 @@ const groupRoutes = require('./routes/groupRoutes'); // Grupphanterings-routen
 
 console.log('server.js loaded');
 
-const app = express(); // Initiera express-appen
+// Initiera express-appen
+const app = express();
 
 // Middleware för CORS-inställningar
 app.use(cors({
-  origin: 'http://localhost:3000',
+  origin: 'http://localhost:3000', // Tillåt frontend att ansluta
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
@@ -37,18 +38,39 @@ mongoose.connect(process.env.MONGO_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 })
-  .then(() => {
-    console.log("Connected to MongoDB");
-  })
-  .catch((error) => {
-    console.error("MongoDB connection error:", error);
-  });
-
-// Starta servern
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+  .then(() => console.log('Connected to MongoDB'))
+  .catch((error) => console.error('MongoDB connection error:', error));
 
 // Enkel testroute för att säkerställa att servern fungerar
 app.get('/test', (req, res) => {
   res.send('Server is working!');
 });
+
+// Hantera 404 (om ingen route matchar)
+app.use((req, res, next) => {
+  res.status(404).send('API endpoint not found.');
+});
+const cache = new Map();
+
+app.get('/api/matches', async (req, res) => {
+  try {
+      const matches = await scrapeBasicMatchData();
+      cache.clear(); // Rensa cachen
+      cache.set('matches', matches); // Lägg till i cachen igen
+      res.json(matches);
+  } catch (error) {
+      console.error('Error fetching matches:', error);
+      res.status(500).send('Kunde inte hämta matcher');
+  }
+});
+
+
+// Fånga upp serverfel
+app.use((err, req, res, next) => {
+  console.error('Server error:', err);
+  res.status(500).json({ error: 'Internal server error' });
+});
+
+// Starta servern
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
