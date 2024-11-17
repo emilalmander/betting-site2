@@ -6,6 +6,7 @@ import { Link, useNavigate } from 'react-router-dom';
 const MyGroupsPage = () => {
   const { user } = useAuth();
   const [groups, setGroups] = useState([]);
+  const [deletedGroups, setDeletedGroups] = useState([]);
   const [newGroupName, setNewGroupName] = useState('');
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -21,13 +22,23 @@ const MyGroupsPage = () => {
     const fetchGroups = async () => {
       try {
         const response = await axios.get(`http://localhost:5000/api/groups/user/${user.id}`);
-        setGroups(response.data);
+        setGroups(response.data.filter((group) => !group.deleted));
       } catch (error) {
         console.error('Kunde inte hämta grupper:', error);
       }
     };
 
+    const fetchDeletedGroups = async () => {
+      try {
+        const response = await axios.get(`http://localhost:5000/api/groups/user/${user.id}/deleted`);
+        setDeletedGroups(response.data);
+      } catch (error) {
+        console.error('Kunde inte hämta borttagna grupper:', error);
+      }
+    };
+
     fetchGroups();
+    fetchDeletedGroups();
   }, [user]);
 
   const handleCreateGroup = async () => {
@@ -56,9 +67,12 @@ const MyGroupsPage = () => {
 
   const handleDeleteGroup = async (groupId) => {
     try {
-      await axios.delete(`http://localhost:5000/api/groups/${groupId}`);
+      await axios.put(`http://localhost:5000/api/groups/${groupId}/soft-delete`);
       setGroups(groups.filter((group) => group._id !== groupId));
       setShowDeleteConfirm(false);
+      // Fetch deleted groups again to update the list
+      const response = await axios.get(`http://localhost:5000/api/groups/user/${user.id}/deleted`);
+      setDeletedGroups(response.data);
     } catch (error) {
       console.error('Kunde inte ta bort grupp:', error);
     }
@@ -84,13 +98,6 @@ const MyGroupsPage = () => {
 
   return (
     <div className="flex flex-col items-center min-h-screen bg-gray-950 text-gray-200 p-6">
-      <button
-        onClick={() => navigate(-1)}
-        className="self-start mb-4 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md"
-      >
-        Tillbaka
-      </button>
-
       <div className="w-full max-w-5xl flex flex-col md:flex-row gap-8">
         <div className="bg-gray-800 p-6 rounded-lg shadow-lg w-full md:w-1/3">
           <h2 className="text-xl font-semibold text-green-500 mb-4">Skapa Ny Grupp</h2>
@@ -200,6 +207,22 @@ const MyGroupsPage = () => {
           </div>
         </div>
       )}
+
+      <div className="w-full max-w-5xl mt-8">
+        <h2 className="text-3xl font-bold text-red-500 mb-6 text-center">Borttagna Grupper</h2>
+        <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-2">
+          {deletedGroups.length > 0 ? (
+            deletedGroups.map((group) => (
+              <div key={group._id} className="bg-gray-800 p-6 rounded-lg shadow-lg">
+                <h3 className="text-xl font-semibold text-red-400 mb-2">{group.name}</h3>
+                <p className="text-gray-400 mb-4">Antal medlemmar: {group.members?.length || 0}</p>
+              </div>
+            ))
+          ) : (
+            <p className="text-center text-gray-400 col-span-full">Inga borttagna grupper tillgängliga.</p>
+          )}
+        </div>
+      </div>
     </div>
   );
 };

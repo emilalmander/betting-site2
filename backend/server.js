@@ -12,6 +12,7 @@ const matchRoutes = require('./routes/matchRoutes');
 const guessRoutes = require('./routes/guessRoutes');
 const groupRoutes = require('./routes/groupRoutes'); // Grupphanterings-routen
 
+
 console.log('server.js loaded');
 
 // Initiera express-appen
@@ -32,6 +33,8 @@ app.use('/api/matches', matchRoutes);
 app.use('/api/guesses', guessRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
 app.use('/api/groups', groupRoutes); // Grupphanterings-routen
+app.use('/api/groups', require('./routes/groupRoutes'));
+
 
 // Anslut till MongoDB
 mongoose.connect(process.env.MONGO_URI, {
