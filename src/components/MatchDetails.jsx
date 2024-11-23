@@ -10,12 +10,10 @@ const MatchDetails = () => {
   const [match, setMatch] = useState(null); // Matchdata
   const [loading, setLoading] = useState(true); // Laddningsstatus
   const [error, setError] = useState(null); // Felstatus
-  const [mockMatchDetails, setmockMatchDetails] = useState(null); // Felstatus 
+  
   // State för gissning
-  const [exactScore, setExactScore] = useState({ teamA: 20, teamB: 20 });
-  const [winMargin, setWinMargin] = useState(0);
+  const [exactScore, setExactScore] = useState({ teamA: 0, teamB: 0 });
   const [winningTeam, setWinningTeam] = useState(null);
-  const [totalGoals, setTotalGoals] = useState(0);
   const [hasGuessed, setHasGuessed] = useState(false);
   const [showConfirmPopup, setShowConfirmPopup] = useState(false);
 
@@ -24,14 +22,12 @@ const MatchDetails = () => {
     const fetchMatch = async () => {
       try {
         const response = await axios.get(`http://localhost:5000/api/matches/${id}`);
-        console.log('Matchdata:', response.data); // För debug
-        setMatch(response.data);
+        console.log('svar från api', response.data);
+        setMatch(response.data); // Detta bör inkludera matchId
       } catch (error) {
         console.error('Error fetching match:', error);
         setError('Kunde inte ladda matchen. Försök igen senare.');
-        setMatch(mockMatchDetails);
       } finally {
-
         setLoading(false);
       }
     };
@@ -39,13 +35,12 @@ const MatchDetails = () => {
     fetchMatch();
   }, [id]);
 
-  
-
-  // Funktioner för att hantera gissningar
+  // Funktion för att hantera vinnande lag
   const handleTeamSelection = (team) => {
     setWinningTeam(team);
   };
 
+  // Funktion för att ändra exakta resultat
   const handleScoreChange = (team, increment) => {
     setExactScore((prevScore) => ({
       ...prevScore,
@@ -53,27 +48,42 @@ const MatchDetails = () => {
     }));
   };
 
-  const handleTotalGoalsChange = (value) => {
-    setTotalGoals((prevTotal) => Math.max(0, prevTotal + value));
-  };
-
+  // Skicka gissning till API
   const handleSubmitGuess = async () => {
+    if (!match?.matchId || !user?.id) {
+      console.error('Match eller användardata saknas:', {
+        match: match?.matchId,
+        user: user?.id,
+      });
+      alert('Match eller användardata saknas.');
+      return;
+    }
+  
     try {
-      await axios.post('http://localhost:5000/api/guesses', {
-        matchId: id,
+      console.log('Skickar gissning:', {
+        matchId: match.matchId, // Se till att detta matchar backend
         userId: user.id,
         exactScore,
-        winMargin,
         winningTeam,
-        totalGoals,
+        totalGoals: exactScore.teamA + exactScore.teamB,
       });
+  
+      await axios.post('http://localhost:5000/api/guesses', {
+        matchId: match.matchId,
+        userId: user.id,
+        exactScore,
+        winningTeam,
+        totalGoals: exactScore.teamA + exactScore.teamB,
+      });
+  
       setHasGuessed(true);
       alert('Gissning skickad!');
     } catch (error) {
-      console.error('Error submitting guess:', error);
+      console.error('Error submitting guess:', error.response?.data || error.message);
       alert('Kunde inte skicka din gissning. Försök igen.');
     }
   };
+  
 
   const handleChangeGuess = () => {
     setShowConfirmPopup(true);
@@ -112,31 +122,31 @@ const MatchDetails = () => {
           {match.dateTime}
         </p>
 
-       {/* Odds */}
-{match.odds ? (
-  <div className="bg-gray-800 p-4 rounded-lg text-white mb-6">
-    <h3 className="text-lg font-semibold mb-2">Odds</h3>
-    <div className="flex justify-between">
-      <div className="text-center">
-        <p>Team A</p>
-        <p>{match.odds.teamA}</p>
-      </div>
-      <div className="text-center">
-        <p>Oavgjort</p>
-        <p>{match.odds.draw}</p>
-      </div>
-      <div className="text-center">
-        <p>Team B</p>
-        <p>{match.odds.teamB}</p>
-      </div>
-    </div>
-  </div>
-) : (
-  <div className="bg-gray-800 p-4 rounded-lg text-white mb-6">
-    <h3 className="text-lg font-semibold mb-2">Odds</h3>
-    <p className="text-center text-gray-400">Odds är inte tillgängliga för denna match.</p>
-  </div>
-)}
+        {/* Odds */}
+        {match.odds ? (
+          <div className="bg-gray-800 p-4 rounded-lg text-white mb-6">
+            <h3 className="text-lg font-semibold mb-2">Odds</h3>
+            <div className="flex justify-between">
+              <div className="text-center">
+                <p>Team A</p>
+                <p>{match.odds.teamA}</p>
+              </div>
+              <div className="text-center">
+                <p>Oavgjort</p>
+                <p>{match.odds.draw}</p>
+              </div>
+              <div className="text-center">
+                <p>Team B</p>
+                <p>{match.odds.teamB}</p>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="bg-gray-800 p-4 rounded-lg text-white mb-6">
+            <h3 className="text-lg font-semibold mb-2">Odds</h3>
+            <p className="text-center text-gray-400">Odds är inte tillgängliga för denna match.</p>
+          </div>
+        )}
 
         {/* Exakt resultat */}
         <div className="mb-6">
@@ -162,7 +172,30 @@ const MatchDetails = () => {
           </div>
         </div>
 
-        {/* Skicka eller Ändra Gissning */}
+        {/* Välj vinnande lag */}
+        <div className="mb-6">
+          <h3 className="text-lg font-semibold text-gray-300 mb-2">Välj Vinnande Lag</h3>
+          <div className="flex justify-around">
+            <button
+              onClick={() => handleTeamSelection('teamA')}
+              className={`px-4 py-2 rounded-lg font-bold ${
+                winningTeam === 'teamA' ? 'bg-green-600' : 'bg-gray-800'
+              } hover:bg-green-700`}
+            >
+              {match.teamA}
+            </button>
+            <button
+              onClick={() => handleTeamSelection('teamB')}
+              className={`px-4 py-2 rounded-lg font-bold ${
+                winningTeam === 'teamB' ? 'bg-green-600' : 'bg-gray-800'
+              } hover:bg-green-700`}
+            >
+              {match.teamB}
+            </button>
+          </div>
+        </div>
+
+        {/* Skicka eller ändra gissning */}
         <button
           onClick={hasGuessed ? handleChangeGuess : handleSubmitGuess}
           className={`w-full ${hasGuessed ? 'bg-red-500' : 'bg-green-500'} hover:bg-green-600 text-white py-2 rounded-md font-semibold transition duration-200`}

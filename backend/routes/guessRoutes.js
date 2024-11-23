@@ -2,26 +2,60 @@ const express = require('express');
 const router = express.Router();
 console.log('guessRoutes loaded');
 const Guess = require('../models/Guess');
+const Match = require('../models/Match'); // Byt sökväg efter behov
+const mongoose = require('mongoose');
 
 router.post('/', async (req, res) => {
-  console.log('Data mottagen:', req.body);
+  console.log('Data mottagen från frontend:', req.body);
   try {
-    const { matchId, userId, exactScore, winMargin, winningTeam, totalGoals } = req.body;
+    const { matchId, userId, exactScore, winningTeam, totalGoals } = req.body;
 
+    // Kontrollera att matchId är giltigt
+    const match = await Match.findOne({ matchId });
+    if (!match) {
+      console.log('Ingen match hittades med matchId:', matchId);
+      return res.status(400).json({ error: 'Ogiltigt matchId' });
+    }
+
+    console.log('Hittad match för matchId:', match._id);
+
+    // Skapa ny gissning
     const newGuess = new Guess({
-      match: matchId,
+      match: match._id, // Referens till matchens ObjectId
       user: userId,
       exactScore,
-      winMargin,
       winningTeam,
       totalGoals,
     });
 
+    console.log('Ny gissning som sparas:', newGuess);
+
+    // Spara gissningen
     await newGuess.save();
+
     res.status(201).json(newGuess);
   } catch (error) {
-    console.error('Kunde inte skapa gissning:', error); 
+    console.error('Kunde inte skapa gissning:', error);
     res.status(500).json({ error: 'Kunde inte skapa gissning', details: error.message });
+  }
+});
+router.get('/:id', async (req, res) => {
+  try {
+    const match = await Match.findById(req.params.id); // Anpassa efter din matchmodell
+    if (!match) {
+      return res.status(404).json({ error: 'Match hittades inte' });
+    }
+
+    res.json({
+      matchId: match.id, // Se till att matchId ingår
+      teamA: match.teamA,
+      teamB: match.teamB,
+      dateTime: match.dateTime,
+      odds: match.odds,
+    });
+  } catch (error) {
+    console.error('Kunde inte hämta match:', error);
+    res.status(500).json({ error: 'Kunde inte hämta match' });
   }
 });
 

@@ -1,5 +1,6 @@
 const puppeteer = require('puppeteer');
 
+
 const scrapeBasicMatchData = async () => {
   try {
     const browser = await puppeteer.launch({ headless: true });
@@ -8,6 +9,7 @@ const scrapeBasicMatchData = async () => {
 
     const matches = await page.evaluate(() => {
       return Array.from(document.querySelectorAll('.event__match')).map((match) => ({
+        
         matchId: match.id.split('_')[2],
         teamA: match.querySelector('.event__participant--home')?.textContent.trim() || 'N/A',
         teamB: match.querySelector('.event__participant--away')?.textContent.trim() || 'N/A',
@@ -78,7 +80,12 @@ const scrapeMatchDetails = async (matchId) => {
   console.log("Scraped Match Details:", details);
 
   await browser.close();
-  return details;
+
+  // Lägg till matchId i resultatet
+  return {
+    matchId, // Lägg till matchId från input
+    ...details,
+  };
 };
 
 module.exports = { scrapeBasicMatchData, scrapeMatchDetails };

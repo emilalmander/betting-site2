@@ -20,7 +20,30 @@ router.get('/scrape', async (req, res) => {
   }
 });
 
+router.post('/scrape-matches', async (req, res) => {
+  try {
+    const matches = await scrapeBasicMatchData(); // Hämta skrapade matcher
 
+    // Spara matcherna i databasen
+    for (const match of matches) {
+      const existingMatch = await Match.findOne({ matchId: match.matchId });
+      if (!existingMatch) {
+        await Match.create({
+          matchId: match.matchId,
+          teamA: match.teamA,
+          teamB: match.teamB,
+          dateTime: `${match.date} ${match.time}`, // Kombinera datum och tid
+          odds: match.odds || {}, // Lägg till odds om det finns
+        });
+      }
+    }
+
+    res.status(200).json({ message: 'Matcher skrapades och sparades i databasen.' });
+  } catch (error) {
+    console.error('Error scraping and saving matches:', error);
+    res.status(500).json({ error: 'Kunde inte skrapa och spara matcher.' });
+  }
+});
 
 
 // Route för att hämta alla matcher
@@ -52,7 +75,15 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   const { id } = req.params;
   try {
-    const matchDetails = await scrapeMatchDetails(id); // Hämta detaljer från scraper
+    const matchDetails = await scrapeMatchDetails(id);
+
+    // Lägg till fler fält som kanske saknas
+    const additionalData = await Match.findOne({ matchId: id });
+
+    if (additionalData) {
+      matchDetails.date = additionalData.dateTime.split(' ')[0]; // Exempel för att hämta datum från databasen
+    }
+
     res.json(matchDetails);
   } catch (error) {
     console.error(`Error fetching details for match ${id}:`, error);
