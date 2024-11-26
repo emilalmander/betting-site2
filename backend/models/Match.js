@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 const matchSchema = new mongoose.Schema({
-  matchId: { type: String, required: true, unique: true }, // matchId som unikt fält
+  matchId: { type: String, required: true, unique: true },
   teamA: { type: String, required: true },
   teamB: { type: String, required: true },
   dateTime: { type: String, required: true },
@@ -13,4 +13,3 @@ const matchSchema = new mongoose.Schema({
 });
 
 module.exports = mongoose.model('Match', matchSchema);
-

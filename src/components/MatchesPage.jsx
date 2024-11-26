@@ -1,13 +1,17 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import MatchCard from "./MatchCard";
+import { useAuth } from "../AuthContext"; // Om du har en AuthContext för användarinformation
 
 const MatchesPage = () => {
+  const { user } = useAuth(); // Hämta användaren från AuthContext
   const [allMatches, setAllMatches] = useState([]);
   const [filteredMatches, setFilteredMatches] = useState([]);
   const [currentCategory, setCurrentCategory] = useState("today");
   const [visibleMatches, setVisibleMatches] = useState(20); // Initial antal matcher
   const [searchTerm, setSearchTerm] = useState("");
+  const [ongoingGuesses, setOngoingGuesses] = useState([]); // För pågående gissningar
+  const [loadingGuesses, setLoadingGuesses] = useState(false);
 
   useEffect(() => {
     const fetchMatches = async () => {
@@ -23,6 +27,26 @@ const MatchesPage = () => {
 
     fetchMatches();
   }, []);
+
+  useEffect(() => {
+    const fetchOngoingGuesses = async () => {
+      if (!user?.id) {
+        console.warn("Ingen användare inloggad, hämtar inte pågående gissningar.");
+        return;
+      }
+      try {
+        setLoadingGuesses(true);
+        const response = await axios.get(`http://localhost:5000/api/guesses/user/${user.id}/ongoing`);
+        setOngoingGuesses(response.data);
+      } catch (error) {
+        console.error("Error fetching ongoing guesses:", error);
+      } finally {
+        setLoadingGuesses(false);
+      }
+    };
+
+    fetchOngoingGuesses();
+  }, [user]);
 
   const filterMatches = (category, matches = allMatches) => {
     const today = new Date().toLocaleDateString();
@@ -93,6 +117,14 @@ const MatchesPage = () => {
           >
             Kommande Matcher
           </li>
+          <li
+            className={`cursor-pointer p-2 rounded-lg ${
+              currentCategory === "ongoing" ? "bg-green-500 text-white" : "hover:bg-gray-800"
+            }`}
+            onClick={() => setCurrentCategory("ongoing")}
+          >
+            Mina Gissningar
+          </li>
         </ul>
       </aside>
 
@@ -109,17 +141,49 @@ const MatchesPage = () => {
           />
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {filteredMatches.slice(0, visibleMatches).length > 0 ? (
-            filteredMatches.slice(0, visibleMatches).map((match) => (
-              <MatchCard key={match.matchId || match._id} match={match} />
-            ))
-          ) : (
-            <p className="text-gray-400 text-center col-span-full">Inga matcher hittades.</p>
-          )}
-        </div>
+        {currentCategory === "ongoing" ? (
+          <div>
+            <h2 className="text-xl font-bold mb-4 text-green-400">Pågående Gissningar</h2>
+            {loadingGuesses ? (
+              <p className="text-gray-400">Laddar...</p>
+            ) : ongoingGuesses.length === 0 ? (
+              <p className="text-gray-400">Inga pågående gissningar.</p>
+            ) : (
+              <ul className="space-y-4">
+                {ongoingGuesses.map((guess) => (
+                  <li
+                    key={guess._id}
+                    className="bg-gray-800 p-4 rounded-lg shadow-md text-gray-300"
+                  >
+                    <p>
+                      <span className="font-bold">{guess.match.teamA}</span> vs{" "}
+                      <span className="font-bold">{guess.match.teamB}</span>
+                    </p>
+                    <p>
+                      Gissat resultat:{" "}
+                      <span className="font-semibold">
+                        {guess.exactScore.teamA} - {guess.exactScore.teamB}
+                      </span>
+                    </p>
+                    <p>Vinnande lag: {guess.winningTeam}</p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {filteredMatches.slice(0, visibleMatches).length > 0 ? (
+              filteredMatches.slice(0, visibleMatches).map((match) => (
+                <MatchCard key={match.matchId || match._id} match={match} />
+              ))
+            ) : (
+              <p className="text-gray-400 text-center col-span-full">Inga matcher hittades.</p>
+            )}
+          </div>
+        )}
 
-        {visibleMatches < filteredMatches.length && (
+        {currentCategory !== "ongoing" && visibleMatches < filteredMatches.length && (
           <div className="flex justify-center mt-6">
             <button
               className="px-4 py-2 bg-green-500 hover:bg-green-400 text-white rounded-lg"

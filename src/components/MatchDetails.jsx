@@ -10,35 +10,69 @@ const MatchDetails = () => {
   const [match, setMatch] = useState(null); // Matchdata
   const [loading, setLoading] = useState(true); // Laddningsstatus
   const [error, setError] = useState(null); // Felstatus
-  
+  const [guessId, setGuessId] = useState(null); // Lagra gissningens ID
+
   // State för gissning
   const [exactScore, setExactScore] = useState({ teamA: 0, teamB: 0 });
   const [winningTeam, setWinningTeam] = useState(null);
   const [hasGuessed, setHasGuessed] = useState(false);
   const [showConfirmPopup, setShowConfirmPopup] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
 
   // Hämta matchdata från API
   useEffect(() => {
-    const fetchMatch = async () => {
+    const fetchMatchAndGuess = async () => {
       try {
-        const response = await axios.get(`http://localhost:5000/api/matches/${id}`);
-        console.log('svar från api', response.data);
-        setMatch(response.data); // Detta bör inkludera matchId
+        const matchResponse = await axios.get(`http://localhost:5000/api/matches/${id}`);
+        setMatch(matchResponse.data);
+
+        if (user?.id) {
+          const guessCheckResponse = await axios.get(
+            `http://localhost:5000/api/guesses/check/${user.id}/${matchResponse.data.matchId}`
+          );
+
+          if (guessCheckResponse.data.exists) {
+            setHasGuessed(true);
+            setGuessId(guessCheckResponse.data.guessId); // Spara gissningens ID
+          } else {
+            setHasGuessed(false);
+          }
+        }
       } catch (error) {
-        console.error('Error fetching match:', error);
-        setError('Kunde inte ladda matchen. Försök igen senare.');
+        console.error('Error fetching match or guess:', error);
+        setError('Kunde inte ladda matchen eller gissningen.');
       } finally {
         setLoading(false);
+        setGuessId(null); // Rensa gamla ID:n
       }
     };
-  
-    fetchMatch();
-  }, [id]);
+
+    fetchMatchAndGuess();
+  }, [id, user]);
 
   // Funktion för att hantera vinnande lag
   const handleTeamSelection = (team) => {
     setWinningTeam(team);
   };
+  const fetchGuessStatus = async () => {
+    try {
+        const response = await axios.get(
+            `http://localhost:5000/api/guesses/check/${user.id}/${match?.matchId}`
+        );
+
+        console.log('Guess status:', response.data);
+
+        if (response.data.exists) {
+            setHasGuessed(true);
+            setGuessId(response.data.guessId);
+        } else {
+            setHasGuessed(false);
+        }
+    } catch (error) {
+        console.error('Kunde inte hämta gissningsstatus:', error);
+    }
+};
 
   // Funktion för att ändra exakta resultat
   const handleScoreChange = (team, increment) => {
@@ -48,51 +82,94 @@ const MatchDetails = () => {
     }));
   };
 
-  // Skicka gissning till API
+  // Skicka eller uppdatera gissning till API
   const handleSubmitGuess = async () => {
-    if (!match?.matchId || !user?.id) {
-      console.error('Match eller användardata saknas:', {
-        match: match?.matchId,
-        user: user?.id,
-      });
-      alert('Match eller användardata saknas.');
-      return;
-    }
-  
-    try {
-      console.log('Skickar gissning:', {
-        matchId: match.matchId, // Se till att detta matchar backend
-        userId: user.id,
-        exactScore,
-        winningTeam,
-        totalGoals: exactScore.teamA + exactScore.teamB,
-      });
-  
-      await axios.post('http://localhost:5000/api/guesses', {
-        matchId: match.matchId,
-        userId: user.id,
-        exactScore,
-        winningTeam,
-        totalGoals: exactScore.teamA + exactScore.teamB,
-      });
-  
-      setHasGuessed(true);
-      alert('Gissning skickad!');
-    } catch (error) {
-      console.error('Error submitting guess:', error.response?.data || error.message);
-      alert('Kunde inte skicka din gissning. Försök igen.');
-    }
-  };
-  
+    if (isSubmitting) return; // Förhindra dubbelklick
+    setIsSubmitting(true);
 
+    if (!match?.matchId || !user?.id) {
+        console.error('Match eller användardata saknas:', { match, user });
+        alert('Match eller användardata saknas.');
+        setIsSubmitting(false);
+        return;
+    }
+
+    try {
+        if (hasGuessed && guessId) {
+            // Uppdatera existerande gissning
+            console.log('Försöker uppdatera gissning:', {
+                guessId,
+                exactScore,
+                winningTeam,
+                totalGoals: exactScore.teamA + exactScore.teamB,
+            });
+
+            const response = await axios.put(`http://localhost:5000/api/guesses/${guessId}`, {
+                exactScore,
+                winningTeam,
+                totalGoals: exactScore.teamA + exactScore.teamB,
+            });
+
+            console.log('Uppdaterad gissning från server:', response.data);
+            alert('Gissning uppdaterad!');
+
+            // Hämta gissningsstatus på nytt
+            await fetchGuessStatus();
+        } else {
+            // Skicka ny gissning
+            console.log('Försöker skicka ny gissning:', {
+                matchId: match.matchId,
+                userId: user.id,
+                exactScore,
+                winningTeam,
+                totalGoals: exactScore.teamA + exactScore.teamB,
+            });
+
+            const response = await axios.post('http://localhost:5000/api/guesses', {
+                matchId: match.matchId,
+                userId: user.id,
+                exactScore,
+                winningTeam,
+                totalGoals: exactScore.teamA + exactScore.teamB,
+            });
+
+            console.log('Ny gissning skapad:', response.data);
+            setGuessId(response.data._id); // Spara det nya gissningens ID
+            alert('Gissning skickad!');
+
+            // Hämta gissningsstatus på nytt
+            await fetchGuessStatus();
+        }
+    } catch (error) {
+        console.error('Error submitting/updating guess:', error.response?.data || error.message);
+
+        if (error.response?.data?.error === 'Du har redan gjort en gissning för denna match.') {
+            alert('Du har redan gjort en gissning för denna match. Uppdatera istället.');
+            setHasGuessed(true);
+        } else {
+            alert('Kunde inte skicka eller uppdatera din gissning. Försök igen.');
+        }
+    } finally {
+        setIsSubmitting(false);
+    }
+};
+
+// Bekräfta ändring av gissning
+const confirmChangeGuess = async () => {
+    setShowConfirmPopup(false);
+    console.log('Redo att ändra gissning');
+    setHasGuessed(false); // Låter användaren göra en ny gissning
+
+    // Uppdatera gissningsstatus
+    await fetchGuessStatus();
+};
+
+  // Bekräftelsepopup för att ändra gissning
   const handleChangeGuess = () => {
     setShowConfirmPopup(true);
   };
 
-  const confirmChangeGuess = () => {
-    setShowConfirmPopup(false);
-    setHasGuessed(false); // Låter användaren göra en ny gissning
-  };
+  
 
   const cancelChangeGuess = () => {
     setShowConfirmPopup(false);

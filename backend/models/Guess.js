@@ -1,8 +1,7 @@
-// models/Guess.js
 const mongoose = require('mongoose');
 
 const guessSchema = new mongoose.Schema({
-  match: { type: mongoose.Schema.Types.ObjectId, ref: 'Match', required: true }, // match referens
+  match: { type: mongoose.Schema.Types.ObjectId, ref: 'Match', required: true },
   user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   exactScore: {
     teamA: { type: Number, required: true },
