@@ -31,35 +31,61 @@ const scrapeBasicMatchData = async () => {
   }
 };
 
-
 const scrapeMatchDetails = async (matchId) => {
-  try {
-    const browser = await puppeteer.launch({ headless: true });
-    const page = await browser.newPage();
-    await page.goto(`https://www.flashscore.se/match/${matchId}`, { waitUntil: 'domcontentloaded' });
+  const browser = await puppeteer.launch({ headless: true });
+  const page = await browser.newPage();
 
-    const details = await page.evaluate(() => {
-      const teamA = document.querySelector('.duelParticipant__home .participant__participantName')?.textContent.trim();
-      const teamB = document.querySelector('.duelParticipant__away .participant__participantName')?.textContent.trim();
-      const dateTime = document.querySelector('.duelParticipant__startTime')?.textContent.trim();
-
-      if (!teamA || !teamB || !dateTime) {
-        return null; // Returnera null om data saknas
-      }
-
-      return { teamA, teamB, dateTime };
-    });
-
-    await browser.close();
-    if (!details) {
-      throw new Error('Scraping misslyckades. Data saknas.');
+  // Blockera onödiga resurser för snabbare laddning
+  await page.setRequestInterception(true);
+  page.on('request', (request) => {
+    const blockedResources = ['image', 'stylesheet', 'font', 'media'];
+    if (blockedResources.includes(request.resourceType())) {
+      request.abort();
+    } else {
+      request.continue();
     }
+  });
 
-    return { matchId, ...details };
-  } catch (error) {
-    console.error('Error in scrapeMatchDetails:', error);
-    throw error;
-  }
+  await page.goto(`https://www.flashscore.se/match/${matchId}/#/matchsummering/matchsummering`, {
+    waitUntil: 'domcontentloaded',
+  });
+
+  // Vänta lite extra för att säkerställa att sidan laddas klart
+  await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 3000)));
+
+  const details = await page.evaluate(() => {
+    const oddsWrapper = document.querySelector('.oddsWrapper');
+    const getOdds = () => {
+      if (!oddsWrapper) return { teamA: 'N/A', draw: 'N/A', teamB: 'N/A' };
+      const cellWrappers = oddsWrapper.querySelectorAll('.cellWrapper');
+      const oddsArray = Array.from(cellWrappers).map(wrapper => {
+        const oddsValueInner = wrapper.querySelector('.oddsValueInner');
+        return oddsValueInner ? oddsValueInner.textContent.trim() : 'N/A';
+      });
+      return {
+        teamA: oddsArray[0] || 'N/A',
+        draw: oddsArray[1] || 'N/A',
+        teamB: oddsArray[2] || 'N/A',
+      };
+    };
+
+    return {
+      teamA: document.querySelector('.duelParticipant__home .participant__participantName')?.textContent.trim() || 'N/A',
+      teamB: document.querySelector('.duelParticipant__away .participant__participantName')?.textContent.trim() || 'N/A',
+      dateTime: document.querySelector('.duelParticipant__startTime')?.textContent.trim() || 'N/A',
+      odds: getOdds(),
+    };
+  });
+
+  console.log("Scraped Match Details:", details);
+
+  await browser.close();
+
+  // Lägg till matchId i resultatet
+  return {
+    matchId, // Lägg till matchId från input
+    ...details,
+  };
 };
 
 module.exports = { scrapeBasicMatchData, scrapeMatchDetails };

@@ -3,9 +3,7 @@ const router = express.Router();
 const Guess = require('../models/Guess');
 const Match = require('../models/Match'); // Din matchmodell
 const mongoose = require('mongoose');
-const { scrapeBasicMatchData } = require('../scraper/scraper');
-const { scrapeMatchDetails } = require('../scraper/scraper');
-
+const { scrapeBasicMatchData, scrapeMatchDetails } = require('../scraper/scraper');
 
 let cachedMatches = null; // Cache för alla matcher
 let lastScrapeTime = null; // Tidpunkt för senaste scraping
@@ -74,6 +72,7 @@ router.get('/user/:userId/ongoing', async (req, res) => {
 });
 
 // Kontrollera om en användare redan gissat för en specifik match
+// guessRoutes.js
 router.get('/check/:userId/:matchId', async (req, res) => {
   try {
     const { userId, matchId } = req.params;

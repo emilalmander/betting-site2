@@ -50,19 +50,19 @@ router.post('/scrape-matches', async (req, res) => {
 router.get('/', async (req, res) => {
   try {
     const currentTime = Date.now();
-
+    
     // Kontrollera om cachen är giltig
-    if (cachedMatches && (currentTime - lastScrapeTime) < CACHE_DURATION) {
+    if (cachedMatches && (currentTime - lastCacheTime) < CACHE_DURATION) {
       console.log('Använder cachade matcher');
       return res.json(cachedMatches);
     }
 
-    console.log('Hämtar nya matcher...');
+    console.log('Hämtar nya matcher från scraper...');
     const matches = await scrapeBasicMatchData();
 
     // Uppdatera cache
     cachedMatches = matches;
-    lastScrapeTime = currentTime;
+    lastCacheTime = currentTime;
 
     res.json(matches);
   } catch (error) {
@@ -72,11 +72,18 @@ router.get('/', async (req, res) => {
 });
 
 // Hämta detaljer för en specifik match
-// Route för att hämta detaljer för en specifik match
 router.get('/:id', async (req, res) => {
   const { id } = req.params;
   try {
     const matchDetails = await scrapeMatchDetails(id);
+
+    // Lägg till fler fält som kanske saknas
+    const additionalData = await Match.findOne({ matchId: id });
+
+    if (additionalData) {
+      matchDetails.date = additionalData.dateTime.split(' ')[0]; // Exempel för att hämta datum från databasen
+    }
+
     res.json(matchDetails);
   } catch (error) {
     console.error(`Error fetching details for match ${id}:`, error);
