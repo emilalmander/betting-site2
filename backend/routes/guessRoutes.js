@@ -4,6 +4,8 @@ const Guess = require('../models/Guess');
 const Match = require('../models/Match'); // Din matchmodell
 const mongoose = require('mongoose');
 const { scrapeBasicMatchData } = require('../scraper/scraper');
+const { scrapeMatchDetails } = require('../scraper/scraper');
+
 
 let cachedMatches = null; // Cache för alla matcher
 let lastScrapeTime = null; // Tidpunkt för senaste scraping
@@ -76,7 +78,6 @@ router.get('/check/:userId/:matchId', async (req, res) => {
   try {
     const { userId, matchId } = req.params;
 
-    // Kontrollera om matchen finns
     let match = await Match.findOne({ matchId });
     if (!match) {
       console.warn(`Match med matchId ${matchId} hittades inte. Försöker lägga till från skrapning...`);
@@ -106,6 +107,7 @@ router.get('/check/:userId/:matchId', async (req, res) => {
     res.status(500).json({ error: 'Kunde inte kontrollera gissning', details: error.message });
   }
 });
+
 
 // Poängberäkning
 function calculatePoints(guess, matchResult) {

@@ -6,10 +6,11 @@ const matchSchema = new mongoose.Schema({
   teamB: { type: String, required: true },
   dateTime: { type: String, required: true },
   odds: {
-    teamA: { type: Number },
-    draw: { type: Number },
-    teamB: { type: Number },
+    teamA: { type: Number, default: null },
+    draw: { type: Number, default: null },
+    teamB: { type: Number, default: null },
   },
 });
+
 
 module.exports = mongoose.model('Match', matchSchema);

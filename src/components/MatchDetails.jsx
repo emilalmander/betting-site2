@@ -25,16 +25,20 @@ const MatchDetails = () => {
     const fetchMatchAndGuess = async () => {
       try {
         const matchResponse = await axios.get(`http://localhost:5000/api/matches/${id}`);
+        if (!matchResponse.data || !matchResponse.data.matchId) {
+          console.error('Ogiltig matchdata:', matchResponse.data);
+          setError('Ogiltig matchdata');
+          return;
+        }
         setMatch(matchResponse.data);
-
+    
         if (user?.id) {
           const guessCheckResponse = await axios.get(
             `http://localhost:5000/api/guesses/check/${user.id}/${matchResponse.data.matchId}`
           );
-
           if (guessCheckResponse.data.exists) {
             setHasGuessed(true);
-            setGuessId(guessCheckResponse.data.guessId); // Spara gissningens ID
+            setGuessId(guessCheckResponse.data.guessId);
           } else {
             setHasGuessed(false);
           }
@@ -44,7 +48,6 @@ const MatchDetails = () => {
         setError('Kunde inte ladda matchen eller gissningen.');
       } finally {
         setLoading(false);
-        setGuessId(null); // Rensa gamla ID:n
       }
     };
 
